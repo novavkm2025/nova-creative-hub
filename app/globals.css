@@ -22,3 +22,272 @@ body::before {
 
   z-index: 1;
 }
+/* =========================================
+   NOVA INVITATION GALLERY
+========================================= */
+
+.invitation-gallery {
+  columns: 2;
+  column-gap: 16px;
+}
+
+.invitation-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #f5f5f5;
+  break-inside: avoid;
+  cursor: pointer;
+  text-align: left;
+}
+
+.invitation-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: transform 0.5s ease;
+}
+
+.invitation-card:hover .invitation-image {
+  transform: scale(1.025);
+}
+
+.invitation-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.55),
+    transparent 45%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.invitation-overlay span {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  transform: translateY(10px);
+  transition: transform 0.3s ease;
+}
+
+.invitation-card:hover .invitation-overlay {
+  opacity: 1;
+}
+
+.invitation-card:hover .invitation-overlay span {
+  transform: translateY(0);
+}
+
+/* Full screen preview */
+
+.invitation-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+.lightbox-content {
+  position: relative;
+  display: flex;
+  max-height: 94vh;
+  max-width: 1200px;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+
+.lightbox-image {
+  display: block;
+  width: auto;
+  max-width: min(70vw, 700px);
+  max-height: 82vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.45);
+}
+
+.lightbox-close {
+  position: fixed;
+  top: 22px;
+  right: 25px;
+  z-index: 10001;
+  display: flex;
+  height: 44px;
+  width: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.lightbox-actions {
+  width: 280px;
+  flex-shrink: 0;
+  border-radius: 18px;
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  backdrop-filter: blur(15px);
+}
+
+.lightbox-actions p {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.whatsapp-order-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 999px;
+  padding: 13px 18px;
+  background: #25d366;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.whatsapp-order-button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.whatsapp-icon {
+  font-size: 17px;
+}
+
+/* Floating WhatsApp */
+
+.floating-whatsapp {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 999;
+  display: flex;
+  height: 58px;
+  width: 58px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: #25d366;
+  color: white;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition: transform 0.25s ease;
+}
+
+.floating-whatsapp svg {
+  width: 29px;
+  height: 29px;
+}
+
+.floating-whatsapp:hover {
+  transform: scale(1.08);
+}
+
+/* Tablet */
+
+@media (min-width: 768px) {
+  .invitation-gallery {
+    columns: 3;
+    column-gap: 20px;
+  }
+
+  .invitation-card {
+    margin-bottom: 20px;
+    border-radius: 16px;
+  }
+}
+
+/* Desktop */
+
+@media (min-width: 1200px) {
+  .invitation-gallery {
+    columns: 4;
+    column-gap: 22px;
+  }
+
+  .invitation-card {
+    margin-bottom: 22px;
+  }
+}
+
+/* Mobile lightbox */
+
+@media (max-width: 767px) {
+  .invitation-lightbox {
+    padding: 12px;
+    align-items: center;
+  }
+
+  .lightbox-content {
+    width: 100%;
+    max-height: 92vh;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .lightbox-image {
+    max-width: 92vw;
+    max-height: 70vh;
+  }
+
+  .lightbox-actions {
+    width: 100%;
+    max-width: 420px;
+    padding: 15px 18px;
+  }
+
+  .lightbox-actions p {
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+
+  .lightbox-close {
+    top: 12px;
+    right: 12px;
+  }
+
+  .floating-whatsapp {
+    right: 16px;
+    bottom: 16px;
+    height: 54px;
+    width: 54px;
+  }
+}
