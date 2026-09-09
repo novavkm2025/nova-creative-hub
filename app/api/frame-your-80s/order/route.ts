@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import nodemailer from "nodemailer";
-import fs from "fs";
-import path from "path";
 import { Readable } from "stream";
 
 export const runtime = "nodejs";
@@ -41,7 +39,9 @@ export async function POST(request: Request) {
     const frameSize = String(formData.get("frameSize") || "");
     const framePrice = Number(formData.get("framePrice") || 0);
 
-    const aiEditing = String(formData.get("aiEditing")) === "true";
+    const aiEditing =
+      String(formData.get("aiEditing")) === "true";
+
     const aiEditingPrice = Number(
       formData.get("aiEditingPrice") || 0
     );
@@ -50,7 +50,13 @@ export async function POST(request: Request) {
       formData.get("courierPrice") || 60
     );
 
-    const total = Number(formData.get("total") || 0);
+    const total = Number(
+      formData.get("total") || 0
+    );
+
+    // -----------------------------
+    // VALIDATION
+    // -----------------------------
 
     if (!(photo instanceof File)) {
       return NextResponse.json(
@@ -59,103 +65,114 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!name || !whatsapp || !address || !/^\d{6}$/.test(pincode)) {
+    if (
+      !name ||
+      !whatsapp ||
+      !address ||
+      !/^\d{6}$/.test(pincode)
+    ) {
       return NextResponse.json(
-        { error: "Please complete all customer details." },
+        {
+          error:
+            "Please complete all customer details.",
+        },
         { status: 400 }
       );
     }
 
     if (!frameSize || framePrice <= 0) {
       return NextResponse.json(
-        { error: "Please select a frame size." },
+        {
+          error:
+            "Please select a frame size.",
+        },
         { status: 400 }
       );
     }
 
+    // -----------------------------
+    // CREATE ORDER ID
+    // -----------------------------
+
     const orderId = createOrderId();
-    const photoBuffer = Buffer.from(await photo.arrayBuffer());
 
-    // =========================
-    // GOOGLE DRIVE - OAUTH
-    // =========================
-
-    const credentialsPath = path.join(
-      process.cwd(),
-      "credentials.json"
+    const photoBuffer = Buffer.from(
+      await photo.arrayBuffer()
     );
 
-    const tokenPath = path.join(
-      process.cwd(),
-      "google-token.json"
-    );
+    // -----------------------------
+    // GOOGLE OAUTH
+    // -----------------------------
 
-    if (!fs.existsSync(credentialsPath)) {
+    const clientId =
+      process.env.GOOGLE_CLIENT_ID;
+
+    const clientSecret =
+      process.env.GOOGLE_CLIENT_SECRET;
+
+    const refreshToken =
+      process.env.GOOGLE_REFRESH_TOKEN;
+
+    if (
+      !clientId ||
+      !clientSecret ||
+      !refreshToken
+    ) {
       throw new Error(
-        "credentials.json was not found in the project root."
+        "Google OAuth environment variables are missing."
       );
     }
 
-    if (!fs.existsSync(tokenPath)) {
+    const oauth2Client =
+      new google.auth.OAuth2(
+        clientId,
+        clientSecret
+      );
+
+    oauth2Client.setCredentials({
+      refresh_token: refreshToken,
+    });
+
+    // -----------------------------
+    // GOOGLE DRIVE
+    // -----------------------------
+
+    const driveFolderId =
+      process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+    if (!driveFolderId) {
       throw new Error(
-        "google-token.json was not found. Run: node authorize-google.js"
+        "GOOGLE_DRIVE_FOLDER_ID is missing."
       );
     }
-
-    const credentials = JSON.parse(
-      fs.readFileSync(credentialsPath, "utf8")
-    );
-
-    const tokens = JSON.parse(
-      fs.readFileSync(tokenPath, "utf8")
-    );
-
-    const oauth2Client = new google.auth.OAuth2(
-      credentials.installed?.client_id ||
-        credentials.web?.client_id,
-
-      credentials.installed?.client_secret ||
-        credentials.web?.client_secret,
-
-      credentials.installed?.redirect_uris?.[0] ||
-        credentials.web?.redirect_uris?.[0]
-    );
-
-    oauth2Client.setCredentials(tokens);
 
     const drive = google.drive({
       version: "v3",
       auth: oauth2Client,
     });
 
-    if (!process.env.GOOGLE_DRIVE_FOLDER_ID) {
-      throw new Error(
-        "GOOGLE_DRIVE_FOLDER_ID is missing from .env.local."
-      );
-    }
-
     const safeName = name.replace(
       /[^a-zA-Z0-9-_]/g,
       "_"
     );
 
-    const driveResponse = await drive.files.create({
-      requestBody: {
-        name: `${orderId}-${safeName}.jpg`,
-        parents: [
-          process.env.GOOGLE_DRIVE_FOLDER_ID
-        ],
-      },
+    const driveResponse =
+      await drive.files.create({
+        requestBody: {
+          name: `${orderId}-${safeName}.jpg`,
+          parents: [driveFolderId],
+        },
 
-      media: {
-        mimeType: "image/jpeg",
-        body: Readable.from(photoBuffer),
-      },
+        media: {
+          mimeType: "image/jpeg",
+          body: Readable.from(photoBuffer),
+        },
 
-      fields: "id,name,webViewLink",
-    });
+        fields: "id,name,webViewLink",
+      });
 
-    const driveFileId = driveResponse.data.id;
+    const driveFileId =
+      driveResponse.data.id;
 
     if (!driveFileId) {
       throw new Error(
@@ -163,17 +180,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const fileInfo = await drive.files.get({
-      fileId: driveFileId,
-      fields: "webViewLink",
-    });
+    const fileInfo =
+      await drive.files.get({
+        fileId: driveFileId,
+        fields: "webViewLink",
+      });
 
     const driveLink =
       fileInfo.data.webViewLink || "";
 
-    // =========================
-    // EMAIL
-    // =========================
+    // -----------------------------
+    // EMAIL CONFIGURATION
+    // -----------------------------
 
     if (
       !process.env.SMTP_HOST ||
@@ -182,34 +200,47 @@ export async function POST(request: Request) {
       !process.env.ORDER_EMAIL_TO
     ) {
       throw new Error(
-        "SMTP email settings are missing from .env.local."
+        "SMTP email settings are missing."
       );
     }
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
+    const transporter =
+      nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
 
-      port: Number(
-        process.env.SMTP_PORT || 465
-      ),
+        port: Number(
+          process.env.SMTP_PORT || 465
+        ),
 
-      secure:
-        process.env.SMTP_SECURE !== "false",
+        secure:
+          process.env.SMTP_SECURE !==
+          "false",
 
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    });
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASSWORD,
+        },
+      });
 
     await transporter.verify();
 
+    // -----------------------------
+    // ORDER TIME
+    // -----------------------------
+
     const submittedAt =
-      new Date().toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
+      new Date().toLocaleString(
+        "en-IN",
+        {
+          timeZone: "Asia/Kolkata",
+          dateStyle: "medium",
+          timeStyle: "short",
+        }
+      );
+
+    // -----------------------------
+    // SEND ORDER EMAIL
+    // -----------------------------
 
     await transporter.sendMail({
       from:
@@ -305,7 +336,11 @@ ${submittedAt}
         <h3>Customer Photo</h3>
 
         <p>
-          <a href="${escapeHtml(driveLink)}" target="_blank">
+          <a
+            href="${escapeHtml(driveLink)}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Open Customer Photo in Google Drive
           </a>
         </p>
@@ -316,6 +351,10 @@ ${submittedAt}
         </p>
       `,
     });
+
+    // -----------------------------
+    // SUCCESS
+    // -----------------------------
 
     return NextResponse.json({
       success: true,
